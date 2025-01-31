@@ -15,7 +15,7 @@ document.getElementById("processBtn").addEventListener("click", async () => {
     } else {
       const img = await loadImage(file);
       const resizedImage = await resizeAndCompress(img, maxWidth, maxSizeKB);
-      zip.file(file.name, resizedImage, { binary: true });
+      zip.file(file.name, resizedImage);
     }
   }
 
@@ -38,7 +38,7 @@ async function extractZip(zipFile, zip, maxWidth, maxSizeKB) {
       const fileData = await zipData.files[fileName].async("blob");
       const img = await loadImage(fileData);
       const resizedImage = await resizeAndCompress(img, maxWidth, maxSizeKB);
-      zip.file(fileName, resizedImage, { binary: true });
+      zip.file(fileName, resizedImage);
     }
   }
 }
