@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bild Optimierer</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Bild Optimierer</h1>
+      <label for="maxWidth">Max. Breite der längsten Seite (px):</label>
+      <input type="number" id="maxWidth" value="2000" />
+
+      <label for="maxSize">Max. Bildgröße nach Komprimierung (KB):</label>
+      <input type="number" id="maxSize" value="150" />
+
+      <input type="file" id="fileInput" multiple accept="image/*,.zip" />
+      <!-- <div id="dropZone">Bilder oder Zip-Archiv hier hineinziehen</div> -->
+      <button id="processBtn">Bilder optimieren & Download</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
