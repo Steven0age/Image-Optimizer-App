@@ -11,35 +11,56 @@ document.getElementById("processBtn").addEventListener("click", async () => {
 
   for (const file of files) {
     if (file.name.endsWith(".zip")) {
+      console.log(`Extrahiere ZIP-Datei: ${file.name}`);
       await extractZip(file, zip, maxWidth, maxSizeKB);
     } else {
+      console.log(`Verarbeite Bilddatei: ${file.name}`);
       const img = await loadImage(file);
-      const resizedImage = await resizeAndCompress(img, maxWidth, maxSizeKB);
-      zip.file(file.name, resizedImage);
+      const resizedImageBlob = await resizeAndCompress(
+        img,
+        maxWidth,
+        maxSizeKB
+      );
+      zip.file(file.name, resizedImageBlob, { binary: true });
     }
   }
 
-  zip.generateAsync({ type: "blob" }).then((content) => {
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(content);
-    link.download = "optimized_images.zip";
-    link.click();
-  });
+  console.log("Generiere ZIP-Archiv mit den optimierten Bildern...");
+  zip
+    .generateAsync({ type: "blob" })
+    .then((content) => {
+      console.log("ZIP-Archiv erfolgreich generiert. Starte Download.");
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = "optimized_images.zip";
+      link.click();
+    })
+    .catch((err) => {
+      console.error("Fehler beim Generieren des ZIP-Archivs:", err);
+    });
 });
 
 async function extractZip(zipFile, zip, maxWidth, maxSizeKB) {
   const zipData = await JSZip.loadAsync(zipFile);
-  for (const fileName in zipData.files) {
+  const fileEntries = Object.keys(zipData.files);
+
+  for (const fileName of fileEntries) {
+    const file = zipData.files[fileName];
     if (
-      fileName.endsWith(".jpg") ||
-      fileName.endsWith(".jpeg") ||
-      fileName.endsWith(".png")
+      !fileName.endsWith(".jpg") &&
+      !fileName.endsWith(".jpeg") &&
+      !fileName.endsWith(".png")
     ) {
-      const fileData = await zipData.files[fileName].async("blob");
-      const img = await loadImage(fileData);
-      const resizedImage = await resizeAndCompress(img, maxWidth, maxSizeKB);
-      zip.file(fileName, resizedImage);
+      console.log(`Überspringe nicht unterstützte Datei: ${fileName}`);
+      continue;
     }
+
+    console.log(`Extrahiere Datei: ${fileName}`);
+    const fileData = await file.async("blob");
+    const img = await loadImage(fileData);
+    const resizedImageBlob = await resizeAndCompress(img, maxWidth, maxSizeKB);
+    zip.file(fileName.split("/").pop(), resizedImageBlob, { binary: true });
+    console.log(`Datei ${fileName} erfolgreich verarbeitet und hinzugefügt.`);
   }
 }
 
@@ -75,27 +96,24 @@ function resizeAndCompress(img, maxWidth, maxSizeKB) {
     ctx.drawImage(img, 0, 0, width, height);
 
     let quality = 0.85;
-    let resizedImage;
     function tryCompression() {
-      resizedImage = canvas.toDataURL("image/jpeg", quality);
-      if (resizedImage.length / 1024 > maxSizeKB && quality > 0.1) {
-        quality -= 0.05;
-        tryCompression();
-      } else {
-        resolve(dataURLtoBlob(resizedImage));
-      }
+      canvas.toBlob(
+        (blob) => {
+          console.log(
+            `Blob-Größe nach Komprimierung: ${(blob.size / 1024).toFixed(2)} KB`
+          );
+          if (blob.size / 1024 > maxSizeKB && quality > 0.1) {
+            quality -= 0.05;
+            console.log(`Reduziere Qualität auf ${quality}`);
+            tryCompression();
+          } else {
+            resolve(blob);
+          }
+        },
+        "image/jpeg",
+        quality
+      );
     }
     tryCompression();
   });
-}
-
-function dataURLtoBlob(dataURL) {
-  const byteString = atob(dataURL.split(",")[1]);
-  const mimeString = dataURL.split(",")[0].split(":")[1].split(";")[0];
-  const arrayBuffer = new ArrayBuffer(byteString.length);
-  const uintArray = new Uint8Array(arrayBuffer);
-  for (let i = 0; i < byteString.length; i++) {
-    uintArray[i] = byteString.charCodeAt(i);
-  }
-  return new Blob([arrayBuffer], { type: mimeString });
 }
